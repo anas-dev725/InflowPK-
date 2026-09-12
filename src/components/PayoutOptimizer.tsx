@@ -66,20 +66,23 @@ export const PayoutOptimizer: React.FC<PayoutOptimizerProps> = ({
 
   useEffect(() => {
     fetch("/api/fx-rates")
-      .then((res) => res.json())
+      .then((res) => {
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return res.json();
+      })
       .then((data) => {
-        if (data.currencies) {
+        if (data?.currencies) {
           const map: Record<string, number> = {};
           Object.keys(data.currencies).forEach((k) => {
             map[k] = data.currencies[k].pkrRate;
           });
           setLiveRates(map);
         }
-        if (data.interbankRate && !interbankRate) {
+        if (data?.interbankRate && !interbankRate) {
           setInterbankRate(data.interbankRate);
         }
       })
-      .catch((err) => console.log("Using baseline FX rates", err));
+      .catch((err) => console.warn("Using baseline FX rates:", err?.message || err));
   }, []);
 
   // Sync when prop currency changes from parent

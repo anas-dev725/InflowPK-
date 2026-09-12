@@ -48,13 +48,16 @@ export default function App() {
   // Fetch live market benchmark rate on mount
   useEffect(() => {
     fetch("/api/fx-rates")
-      .then((res) => res.json())
+      .then((res) => {
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return res.json();
+      })
       .then((data) => {
-        if (data.interbankRate) {
+        if (data?.interbankRate) {
           setInterbankRate(data.interbankRate);
         }
       })
-      .catch((err) => console.log("Using default benchmark rate", err));
+      .catch((err) => console.warn("Using default benchmark rate:", err?.message || err));
   }, []);
 
   const handleSelectRouteForCompliance = (route: RouteCalculation) => {

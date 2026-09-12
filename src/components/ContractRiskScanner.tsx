@@ -15,6 +15,7 @@ import {
   HelpCircle,
 } from "lucide-react";
 import { ContractAnalysisResult } from "../types";
+import { getClientSideContractAnalysis } from "../utils/clientFallbacks";
 
 interface ContractRiskScannerProps {
   onApplyDetectedAmount: (amount: number) => void;
@@ -102,10 +103,18 @@ export const ContractRiskScanner: React.FC<ContractRiskScannerProps> = ({
       }
 
       const data = await res.json();
+      if (!data.analysis) {
+        throw new Error("No analysis received");
+      }
       setAnalysis(data.analysis);
     } catch (err: any) {
-      console.error(err);
-      setErrorMessage(err.message || "An unexpected error occurred during analysis.");
+      console.warn("Backend analyze-contract unavailable, engaging client-side heuristic engine:", err?.message || err);
+      try {
+        const fallback = getClientSideContractAnalysis(contractText);
+        setAnalysis(fallback);
+      } catch {
+        setErrorMessage(err.message || "An unexpected error occurred during analysis.");
+      }
     } finally {
       setLoading(false);
     }

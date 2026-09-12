@@ -25,6 +25,7 @@ import {
 import { AIDealRouteResult } from "../types";
 import { formatPKR, formatUSD } from "../utils/payoutCalculator";
 import { FeatureTab } from "./Sidebar";
+import { getClientSideDealRoute, compressImageFile } from "../utils/clientFallbacks";
 
 interface AIDealRouterProps {
   onApplyToCalculator: (amount: number, tab?: FeatureTab) => void;
@@ -67,21 +68,29 @@ export const AIDealRouter: React.FC<AIDealRouterProps> = ({
   const [savedToLedger, setSavedToLedger] = useState(false);
   const [activePipelineStep, setActivePipelineStep] = useState(0);
 
-  // File upload handler (drag & drop or click)
-  const handleImageSelect = (file: File) => {
+  // File upload handler (drag & drop or click) with automatic compression
+  const handleImageSelect = async (file: File) => {
     if (!file.type.startsWith("image/")) {
       setError("Please upload an image file (PNG, JPG, WebP screenshot).");
       return;
     }
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const dataUrl = e.target?.result as string;
-      setImagePreview(dataUrl);
-      setImageBase64(dataUrl);
-      setImageMimeType(file.type);
+    try {
+      const compressed = await compressImageFile(file);
+      setImagePreview(compressed.base64);
+      setImageBase64(compressed.base64);
+      setImageMimeType(compressed.mimeType);
       setError(null);
-    };
-    reader.readAsDataURL(file);
+    } catch {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const dataUrl = e.target?.result as string;
+        setImagePreview(dataUrl);
+        setImageBase64(dataUrl);
+        setImageMimeType(file.type);
+        setError(null);
+      };
+      reader.readAsDataURL(file);
+    }
   };
 
   const handleDrop = (e: React.DragEvent) => {
@@ -136,9 +145,18 @@ export const AIDealRouter: React.FC<AIDealRouterProps> = ({
       }
 
       const data = await res.json();
+      if (!data.result) {
+        throw new Error("Invalid response format");
+      }
       setResult(data.result);
     } catch (err: any) {
-      setError(err.message || "An error occurred while routing the deal.");
+      console.warn("Backend route-deal unavailable, engaging resilient client-side financial engine:", err?.message || err);
+      try {
+        const fallback = getClientSideDealRoute(promptContent);
+        setResult(fallback);
+      } catch {
+        setError(err.message || "An error occurred while routing the deal.");
+      }
     } finally {
       clearTimeout(timer1);
       clearTimeout(timer2);

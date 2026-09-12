@@ -41,23 +41,26 @@ export const CurrencyConverter: React.FC<CurrencyConverterProps> = ({
   const fetchLiveRates = () => {
     setIsLoading(true);
     fetch("/api/fx-rates")
-      .then((res) => res.json())
+      .then((res) => {
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return res.json();
+      })
       .then((data) => {
-        if (data.currencies) {
+        if (data?.currencies) {
           const map: Record<string, number> = {};
           Object.keys(data.currencies).forEach((k) => {
             map[k] = data.currencies[k].pkrRate;
           });
           setLiveRates(map);
         }
-        if (data.lastUpdated) {
+        if (data?.lastUpdated) {
           setLastUpdated(new Date(data.lastUpdated).toLocaleTimeString());
         }
-        if (data.source) {
+        if (data?.source) {
           setDataSource(data.source);
         }
       })
-      .catch((err) => console.log("Using baseline fallback rates", err))
+      .catch((err) => console.warn("Using baseline fallback rates:", err?.message || err))
       .finally(() => setIsLoading(false));
   };
 
