@@ -140,3 +140,21 @@ export interface AIDealRouteResult {
   clientReadyReply: string;
   actionStepsForFreelancer: string[];
 }
+
+export interface InflowRecord {
+  id: string;
+  clientName: string;
+  clientCountry: string;
+  grossAmountUsd: number;
+  currency: string;
+  gatewayUsed: string;
+  purposeCode: string;
+  date: string;
+  effectiveFxRate: number;
+  netPkrReceived: number;
+  rupeesSavedVsLegacy: number;
+  whtDeductionPkr: number;
+  status: "Realized" | "Pending Memo" | "e-PRC Claimed";
+  notes?: string;
+}
+

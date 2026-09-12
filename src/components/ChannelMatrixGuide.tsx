@@ -20,7 +20,8 @@ import {
   Building2,
   CreditCard,
   Wallet,
-  Sparkles,
+  Tag,
+  Zap,
 } from "lucide-react";
 import { FeatureTab } from "./Sidebar";
 
@@ -518,7 +519,7 @@ export const ChannelMatrixGuide: React.FC<ChannelMatrixGuideProps> = ({
 
                               {item.bonusRateNote && (
                                 <div className="p-3 rounded-xl bg-amber-50 dark:bg-amber-950/60 border border-amber-200 dark:border-amber-900 text-xs text-amber-900 dark:text-amber-200 flex items-center gap-2">
-                                  <Sparkles className="w-4 h-4 text-amber-600 shrink-0" />
+                                  <Tag className="w-4 h-4 text-amber-600 shrink-0" />
                                   <div>
                                     <span className="font-bold">Promotional Bonus / Rate Feature: </span>
                                     <span>{item.bonusRateNote}</span>
@@ -626,7 +627,7 @@ export const ChannelMatrixGuide: React.FC<ChannelMatrixGuideProps> = ({
                         )}
                         {item.bonusRateNote && (
                           <span className="px-2 py-0.5 rounded text-[9px] font-bold bg-amber-100 dark:bg-amber-950/80 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-800 flex items-center gap-1">
-                            <Sparkles className="w-2.5 h-2.5" />
+                            <Zap className="w-2.5 h-2.5" />
                             <span>Bonus Rate</span>
                           </span>
                         )}

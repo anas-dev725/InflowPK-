@@ -20,45 +20,51 @@ const TAB_TITLES: Record<
 > = {
   aideal: {
     title: "AI Deal Judge & Gateway Router",
-    subtitle: "From messy client chats to optimal gateway, FX protection & SBP tax compliance",
-    tag: "AI Hackathon Engine",
-    tagColor: "bg-purple-100 dark:bg-purple-950/80 text-purple-800 dark:text-purple-300",
+    subtitle: "Turn client chat & project scope into the optimal payout route & tax code",
+    tag: "Stage 1 • Deal Analysis",
+    tagColor: "bg-indigo-100 dark:bg-indigo-950/80 text-indigo-800 dark:text-indigo-300",
+  },
+  contract: {
+    title: "Contract & Scope Guard",
+    subtitle: "Scan client brief, Upwork job, or contract to spot payment traps & milestone risks",
+    tag: "Stage 1 • Scope Review",
+    tagColor: "bg-amber-100 dark:bg-amber-950/80 text-amber-800 dark:text-amber-300",
+  },
+  optimizer: {
+    title: "Net PKR Payout Calculator",
+    subtitle: "Compare 11 withdrawal corridors to maximize take-home Pakistani Rupees",
+    tag: "Stage 2 • Route Comparison",
+    tagColor: "bg-emerald-100 dark:bg-emerald-950/80 text-emerald-800 dark:text-emerald-300",
   },
   beginner: {
-    title: "Gateway & Landing Time Advisor",
-    subtitle: "New to freelancing? Find your best account, required documents & clearance speed",
-    tag: "Start Here",
-    tagColor: "bg-indigo-100 dark:bg-indigo-950/80 text-indigo-800 dark:text-indigo-300",
+    title: "Gateway & Clearance Speed Finder",
+    subtitle: "Find your optimal payout account, required documents & clearance speed",
+    tag: "Stage 2 • Corridors",
+    tagColor: "bg-blue-100 dark:bg-blue-950/80 text-blue-800 dark:text-blue-300",
   },
   converter: {
     title: "Multi-Currency to PKR Converter",
-    subtitle: "Real-time rates for USD, GBP, EUR, AED & SAR with hidden spread detector",
-    tag: "Live FX Tracker",
-    tagColor: "bg-blue-100 dark:bg-blue-950/80 text-blue-800 dark:text-blue-300",
-  },
-  optimizer: {
-    title: "Step 1: Payout Calculator",
-    subtitle: "Find the route that puts the most Pakistani Rupees in your account",
-    tag: "Save on hidden FX fees",
-    tagColor: "bg-emerald-100 dark:bg-emerald-950/80 text-emerald-800 dark:text-emerald-300",
-  },
-  contract: {
-    title: "Step 2: Contract & Offer Scanner",
-    subtitle: "Paste your client's message, Upwork job, or agreement to spot traps",
-    tag: "AI Scope Protection",
-    tagColor: "bg-indigo-100 dark:bg-indigo-950/80 text-indigo-800 dark:text-indigo-300",
+    subtitle: "Real-time rates for USD, GBP, EUR, AED & SAR with hidden bank spread detector",
+    tag: "Stage 2 • Live FX",
+    tagColor: "bg-cyan-100 dark:bg-cyan-950/80 text-cyan-800 dark:text-cyan-300",
   },
   compliance: {
-    title: "Step 3: SBP & e-PRC Compliance Pack",
-    subtitle: "Get your official bank letter, 0.25% tax lock & e-PRC claim in 1-click",
-    tag: "FBR Section 154A",
-    tagColor: "bg-amber-100 dark:bg-amber-950/80 text-amber-800 dark:text-amber-300",
+    title: "SBP Bank Letter & e-PRC Pack",
+    subtitle: "Official bank clearance memo for 0.25% Sec 154A tax lock & swift fund release",
+    tag: "Stage 3 • Bank & Tax",
+    tagColor: "bg-emerald-100 dark:bg-emerald-950/80 text-emerald-800 dark:text-emerald-300",
+  },
+  ledger: {
+    title: "Inflow Ledger & FX Savings Tracker",
+    subtitle: "Realized earnings, cumulative bank markups saved, and certified FBR tax records",
+    tag: "Stage 3 • Payout Records",
+    tagColor: "bg-purple-100 dark:bg-purple-950/80 text-purple-800 dark:text-purple-300",
   },
   matrix: {
-    title: "Payment Gateways & Delivery Times",
-    subtitle: "Complete directory of all 11 options with effective rates, bonus promos & client transfer channels",
-    tag: "11 Verified Options",
-    tagColor: "bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300",
+    title: "Gateways Comparison Directory",
+    subtitle: "Complete directory of 11 payment channels with effective rates, cards & KYC requirements",
+    tag: "Stage 3 • Full Directory",
+    tagColor: "bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200",
   },
 };
 
@@ -77,7 +83,7 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
 
   return (
     <header className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 sticky top-0 z-30 transition-colors">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-between gap-4">
+      <div className="w-full max-w-[1680px] mx-auto px-4 sm:px-6 lg:px-8 2xl:px-10 py-3 flex items-center justify-between gap-4">
         {/* Mobile menu trigger & Section title */}
         <div className="flex items-center gap-3">
           <button

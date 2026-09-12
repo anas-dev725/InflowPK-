@@ -1,3 +1,19 @@
 @import "tailwindcss";
 
 @custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --color-slate-950: #09090b;
+  --color-slate-900: #121215;
+  --color-slate-850: #18181c;
+  --color-slate-800: #222227;
+  --color-slate-700: #32323a;
+}
+
+@layer base {
+  .dark {
+    color-scheme: dark;
+    background-color: #09090b;
+    color: #f4f4f6;
+  }
+}

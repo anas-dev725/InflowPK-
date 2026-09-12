@@ -19,7 +19,12 @@ import {
 import { FeatureTab } from "./Sidebar";
 
 interface CurrencyConverterProps {
-  onApplyToCalculator: (amountUsd: number, tab?: FeatureTab) => void;
+  onApplyToCalculator: (
+    amountUsd: number,
+    tab?: FeatureTab,
+    currency?: CurrencyCode,
+    originalAmount?: number
+  ) => void;
 }
 
 export const CurrencyConverter: React.FC<CurrencyConverterProps> = ({
@@ -268,7 +273,7 @@ export const CurrencyConverter: React.FC<CurrencyConverterProps> = ({
               </div>
 
               <button
-                onClick={() => onApplyToCalculator(equivalentUsd, "channels")}
+                onClick={() => onApplyToCalculator(equivalentUsd, "optimizer", selectedCurrency, amount)}
                 className="px-3.5 py-1.5 rounded-lg bg-slate-900 dark:bg-emerald-600 text-white font-bold text-xs flex items-center justify-center gap-1.5 transition-colors"
               >
                 <span>View All 8 Gateways for this Payout</span>

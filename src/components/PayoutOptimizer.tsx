@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   DollarSign,
   ArrowRight,
@@ -13,13 +13,22 @@ import {
   AlertTriangle,
   ArrowDownRight,
   CheckCircle,
+  Coins,
 } from "lucide-react";
 import { RouteCalculation, PayoutChannel } from "../types";
 import { compareAllRoutes, formatPKR, formatUSD } from "../utils/payoutCalculator";
+import {
+  CurrencyCode,
+  SUPPORTED_CURRENCIES,
+  convertToUSD,
+  convertFromUSD,
+} from "../utils/currencies";
 
 interface PayoutOptimizerProps {
   invoiceAmount: number;
   setInvoiceAmount: (amt: number) => void;
+  selectedCurrency?: CurrencyCode;
+  setSelectedCurrency?: (curr: CurrencyCode) => void;
   interbankRate: number;
   setInterbankRate: (rate: number) => void;
   isPsebRegistered: boolean;
@@ -30,6 +39,8 @@ interface PayoutOptimizerProps {
 export const PayoutOptimizer: React.FC<PayoutOptimizerProps> = ({
   invoiceAmount,
   setInvoiceAmount,
+  selectedCurrency: propsSelectedCurrency,
+  setSelectedCurrency: propsSetSelectedCurrency,
   interbankRate,
   setInterbankRate,
   isPsebRegistered,
@@ -39,7 +50,90 @@ export const PayoutOptimizer: React.FC<PayoutOptimizerProps> = ({
   const [sourceType, setSourceType] = useState<"direct" | "upwork" | "all">("all");
   const [expandedRouteId, setExpandedRouteId] = useState<string | null>(null);
 
-  const routes = compareAllRoutes(invoiceAmount, interbankRate, isPsebRegistered);
+  // Currency Selection & Amount in Chosen Currency
+  const [activeCurrency, setActiveCurrency] = useState<CurrencyCode>(
+    propsSelectedCurrency || "USD"
+  );
+  const [amountInCurrency, setAmountInCurrency] = useState<number>(() => {
+    if (propsSelectedCurrency && propsSelectedCurrency !== "USD") {
+      return Math.round(convertFromUSD(invoiceAmount, propsSelectedCurrency));
+    }
+    return invoiceAmount || 2000;
+  });
+
+  // Live exchange rates from /api/fx-rates
+  const [liveRates, setLiveRates] = useState<Record<string, number>>({});
+
+  useEffect(() => {
+    fetch("/api/fx-rates")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.currencies) {
+          const map: Record<string, number> = {};
+          Object.keys(data.currencies).forEach((k) => {
+            map[k] = data.currencies[k].pkrRate;
+          });
+          setLiveRates(map);
+        }
+        if (data.interbankRate && !interbankRate) {
+          setInterbankRate(data.interbankRate);
+        }
+      })
+      .catch((err) => console.log("Using baseline FX rates", err));
+  }, []);
+
+  // Sync when prop currency changes from parent
+  useEffect(() => {
+    if (propsSelectedCurrency && propsSelectedCurrency !== activeCurrency) {
+      setActiveCurrency(propsSelectedCurrency);
+      setAmountInCurrency(Math.round(convertFromUSD(invoiceAmount, propsSelectedCurrency)));
+    }
+  }, [propsSelectedCurrency]);
+
+  // Sync if invoiceAmount prop changes externally when on USD
+  useEffect(() => {
+    if (activeCurrency === "USD" && invoiceAmount !== amountInCurrency) {
+      setAmountInCurrency(invoiceAmount);
+    }
+  }, [invoiceAmount, activeCurrency]);
+
+  const currInfo = SUPPORTED_CURRENCIES[activeCurrency] || SUPPORTED_CURRENCIES.USD;
+  const currentCurrencyPkrRate = liveRates[activeCurrency] || currInfo.pkrRate;
+
+  // Effective USD used for corridor engine
+  const effectiveUsd =
+    activeCurrency === "USD"
+      ? amountInCurrency
+      : convertToUSD(amountInCurrency, activeCurrency);
+
+  // Update currency selection
+  const handleCurrencyChange = (newCurr: CurrencyCode) => {
+    setActiveCurrency(newCurr);
+    if (propsSetSelectedCurrency) {
+      propsSetSelectedCurrency(newCurr);
+    }
+    // Convert current effective USD into the new currency
+    const converted = Math.round(convertFromUSD(effectiveUsd, newCurr));
+    const newAmt = converted > 0 ? converted : (SUPPORTED_CURRENCIES[newCurr].sampleAmounts[1] || 1000);
+    setAmountInCurrency(newAmt);
+    const newUsd = convertToUSD(newAmt, newCurr);
+    setInvoiceAmount(newUsd);
+  };
+
+  const handleAmountChange = (val: number) => {
+    const safeVal = Math.max(1, val);
+    setAmountInCurrency(safeVal);
+    const newUsd = activeCurrency === "USD" ? safeVal : convertToUSD(safeVal, activeCurrency);
+    setInvoiceAmount(newUsd);
+  };
+
+  const handlePresetClick = (presetVal: number) => {
+    setAmountInCurrency(presetVal);
+    const newUsd = activeCurrency === "USD" ? presetVal : convertToUSD(presetVal, activeCurrency);
+    setInvoiceAmount(newUsd);
+  };
+
+  const routes = compareAllRoutes(effectiveUsd, interbankRate, isPsebRegistered);
 
   // Filter based on source if desired
   const filteredRoutes = routes.filter((r) => {
@@ -56,7 +150,7 @@ export const PayoutOptimizer: React.FC<PayoutOptimizerProps> = ({
   const worstRoute = routes[routes.length - 1];
   const maxSavings = optimalRoute ? optimalRoute.netPkrReceived - worstRoute.netPkrReceived : 0;
 
-  const quickAmounts = [500, 1200, 2000, 3500, 5000, 10000];
+  const currentPresets = currInfo.sampleAmounts || [500, 1000, 2000, 3500, 5000];
 
   return (
     <div className="space-y-8">
@@ -101,44 +195,103 @@ export const PayoutOptimizer: React.FC<PayoutOptimizerProps> = ({
 
         {/* Input Parameters Grid */}
         <div className="grid grid-cols-1 md:grid-cols-12 gap-6 pt-6 items-end">
-          {/* Invoice Amount Input */}
+          {/* Invoice Amount Input with Currency Dropdown */}
           <div className="md:col-span-5">
-            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-2">
-              Invoice Amount (USD)
-            </label>
-            <div className="relative rounded-xl shadow-xs">
-              <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
-                <DollarSign className="w-5 h-5" />
+            <div className="flex items-center justify-between mb-2">
+              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
+                Invoice Amount & Currency
+              </label>
+              <span className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400">
+                {activeCurrency !== "USD"
+                  ? `1 ${currInfo.code} = Rs. ${currentCurrencyPkrRate.toFixed(2)}`
+                  : `Interbank: Rs. ${interbankRate.toFixed(2)}`}
+              </span>
+            </div>
+
+            {/* Combined Currency Dropdown + Amount Input */}
+            <div className="flex rounded-xl shadow-2xs border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/90 focus-within:ring-2 focus-within:ring-emerald-500 focus-within:border-emerald-500 overflow-hidden transition-all">
+              {/* Currency Dropdown Selector */}
+              <div className="relative border-r border-slate-300 dark:border-slate-700 bg-slate-100/90 dark:bg-slate-800 flex items-center shrink-0">
+                <select
+                  id="select-payout-currency"
+                  aria-label="Select Invoice Currency"
+                  value={activeCurrency}
+                  onChange={(e) => handleCurrencyChange(e.target.value as CurrencyCode)}
+                  className="appearance-none bg-transparent py-2.5 pl-3 pr-8 text-xs sm:text-sm font-bold text-slate-900 dark:text-white cursor-pointer outline-none hover:bg-slate-200/60 dark:hover:bg-slate-700/60 transition-colors"
+                >
+                  {Object.values(SUPPORTED_CURRENCIES).map((c) => (
+                    <option
+                      key={c.code}
+                      value={c.code}
+                      className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white font-semibold"
+                    >
+                      {c.flag} {c.code} ({c.symbol})
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown className="w-3.5 h-3.5 text-slate-400 pointer-events-none absolute right-2.5" />
               </div>
-              <input
-                id="input-invoice-amount"
-                type="number"
-                min={50}
-                step={50}
-                value={invoiceAmount || ""}
-                onChange={(e) => setInvoiceAmount(Math.max(1, Number(e.target.value)))}
-                className="block w-full pl-10 pr-14 py-2.5 text-lg font-bold text-slate-900 dark:text-white bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none transition-all font-mono"
-                placeholder="2000"
-              />
-              <div className="absolute inset-y-0 right-0 pr-3.5 flex items-center pointer-events-none text-xs font-bold text-slate-400">
-                USD ($)
+
+              {/* Number Input */}
+              <div className="relative flex-1 flex items-center min-w-0">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-sm font-mono font-bold text-slate-400">
+                  {currInfo.symbol}
+                </div>
+                <input
+                  id="input-invoice-amount"
+                  type="number"
+                  min={1}
+                  step={activeCurrency === "AED" || activeCurrency === "SAR" ? 100 : 50}
+                  value={amountInCurrency || ""}
+                  onChange={(e) => handleAmountChange(Number(e.target.value))}
+                  className="block w-full pl-8 sm:pl-9 pr-14 py-2.5 text-lg font-bold text-slate-900 dark:text-white bg-transparent border-0 outline-none font-mono placeholder:text-slate-400"
+                  placeholder="2000"
+                />
+                <div className="absolute inset-y-0 right-0 pr-3.5 flex items-center pointer-events-none text-xs font-bold text-slate-400">
+                  {currInfo.code}
+                </div>
               </div>
             </div>
 
-            {/* Quick preset chips */}
-            <div className="flex flex-wrap gap-1.5 mt-2.5">
+            {/* Sub-info note with live equivalent */}
+            {activeCurrency !== "USD" ? (
+              <div className="flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400 mt-1.5 px-0.5">
+                <span className="flex items-center gap-1">
+                  <span>USD Equivalent:</span>
+                  <strong className="text-slate-800 dark:text-slate-200 font-mono font-bold">
+                    ${effectiveUsd.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USD
+                  </strong>
+                </span>
+                <span className="text-slate-400">
+                  Mid-market: <strong className="text-emerald-600 dark:text-emerald-400 font-mono">{formatPKR(Math.round(amountInCurrency * currentCurrencyPkrRate))}</strong>
+                </span>
+              </div>
+            ) : (
+              <div className="flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400 mt-1.5 px-0.5">
+                <span>
+                  Interbank Benchmark: <strong className="text-slate-800 dark:text-slate-200 font-mono">Rs. {interbankRate.toFixed(2)}/USD</strong>
+                </span>
+                <span className="text-slate-400">
+                  Ideal Gross: <strong className="text-emerald-600 dark:text-emerald-400 font-mono">{formatPKR(Math.round(amountInCurrency * interbankRate))}</strong>
+                </span>
+              </div>
+            )}
+
+            {/* Quick preset chips tailored to current currency */}
+            <div className="flex flex-wrap items-center gap-1.5 mt-2.5">
               <span className="text-[11px] text-slate-400 mr-1 self-center">Presets:</span>
-              {quickAmounts.map((amt) => (
+              {currentPresets.map((amt) => (
                 <button
                   key={amt}
-                  onClick={() => setInvoiceAmount(amt)}
+                  type="button"
+                  onClick={() => handlePresetClick(amt)}
                   className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all ${
-                    invoiceAmount === amt
+                    amountInCurrency === amt
                       ? "bg-slate-900 dark:bg-emerald-600 text-white"
                       : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700"
                   }`}
                 >
-                  ${amt.toLocaleString()}
+                  {currInfo.symbol}{amt.toLocaleString()}
                 </button>
               ))}
             </div>
@@ -234,7 +387,10 @@ export const PayoutOptimizer: React.FC<PayoutOptimizerProps> = ({
             <div>
               <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 mb-2.5">
                 <Award className="w-3.5 h-3.5" />
-                <span>Optimal Route for ${invoiceAmount.toLocaleString()}</span>
+                <span>
+                  Optimal Route for {currInfo.symbol}{amountInCurrency.toLocaleString()} {currInfo.code}
+                  {activeCurrency !== "USD" && ` (~${formatUSD(effectiveUsd)})`}
+                </span>
               </div>
               <h2 className="text-xl sm:text-2xl font-bold tracking-tight">
                 {optimalRoute.channel.name}
@@ -274,7 +430,8 @@ export const PayoutOptimizer: React.FC<PayoutOptimizerProps> = ({
             Payout Routes Ranked by Net PKR (Highest to Lowest)
           </h3>
           <span className="text-xs text-slate-500 dark:text-slate-400">
-            Showing {filteredRoutes.length} channels modeled for {formatUSD(invoiceAmount)}
+            Showing {filteredRoutes.length} channels modeled for {currInfo.symbol}{amountInCurrency.toLocaleString()} {currInfo.code}
+            {activeCurrency !== "USD" && ` (~${formatUSD(effectiveUsd)})`}
           </span>
         </div>
 
